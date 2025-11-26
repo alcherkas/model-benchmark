@@ -1,0 +1,37 @@
+<div class="card">
+    <div class="card-header">
+        Input
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label for="productDescription" class="form-label">Product Description</label>
+            <textarea class="form-control" id="productDescription" rows="4" @bind="InputText" disabled="@IsRunning"></textarea>
+        </div>
+        <button class="btn btn-primary" @onclick="OnRunClick" disabled="@(IsRunning || string.IsNullOrWhiteSpace(InputText))">
+            @if (IsRunning)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span> Running...</span>
+            }
+            else
+            {
+                <span>Run Pipeline</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsRunning { get; set; }
+    [Parameter] public EventCallback<string> OnRun { get; set; }
+
+    private string InputText { get; set; } = "A smart coffee mug that keeps your drink at the perfect temperature for up to 4 hours. Controlled via smartphone app.";
+
+    private async Task OnRunClick()
+    {
+        if (!string.IsNullOrWhiteSpace(InputText))
+        {
+            await OnRun.InvokeAsync(InputText);
+        }
+    }
+}

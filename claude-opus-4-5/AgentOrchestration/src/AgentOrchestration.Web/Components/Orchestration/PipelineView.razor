@@ -1,0 +1,118 @@
+@using AgentOrchestration.Core.Models
+@using AgentOrchestration.Core.Orchestration
+
+<div class="pipeline-view">
+    <div class="pipeline-header">
+        <h4>
+            <i class="bi bi-diagram-3 me-2"></i>
+            Sequential Pipeline
+        </h4>
+        @if (State?.IsRunning == true)
+        {
+            <div class="pipeline-progress">
+                <div class="progress" style="width: 200px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: @State.ProgressPercentage%"
+                         aria-valuenow="@State.ProgressPercentage" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        @State.ProgressPercentage%
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="pipeline-stages">
+        @foreach (var (agent, index) in Pipeline.Agents.Select((a, i) => (a, i)))
+        {
+            var stepResult = GetStepResult(index);
+            var status = GetStatus(index);
+
+            <div class="pipeline-stage">
+                <AgentCard Agent="@agent"
+                           Status="@status"
+                           Output="@stepResult?.Output"
+                           Duration="@stepResult?.Duration"
+                           TokensUsed="@(stepResult?.TokensUsed ?? 0)"
+                           Error="@stepResult?.Error"
+                           ShowOutput="ShowIntermediateOutputs" />
+
+                @if (index < Pipeline.Agents.Count - 1)
+                {
+                    <div class="stage-connector">
+                        <div class="connector-line @(IsConnectorActive(index) ? "active" : "")"></div>
+                        <i class="bi bi-arrow-right connector-arrow @(IsConnectorActive(index) ? "active" : "")"></i>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @if (State?.IsCompleted == true && !State.HasFailed)
+    {
+        <div class="pipeline-complete alert alert-success mt-3">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            Pipeline completed successfully!
+        </div>
+    }
+    else if (State?.HasFailed == true)
+    {
+        <div class="pipeline-failed alert alert-danger mt-3">
+            <i class="bi bi-x-circle-fill me-2"></i>
+            Pipeline failed. Check the agent outputs for details.
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SequentialPipeline Pipeline { get; set; } = default!;
+
+    [Parameter]
+    public PipelineState? State { get; set; }
+
+    [Parameter]
+    public bool ShowIntermediateOutputs { get; set; } = true;
+
+    private StepResult? GetStepResult(int index)
+    {
+        if (State == null) return null;
+
+        // Check completed steps
+        if (index < State.CompletedSteps.Count)
+        {
+            return State.CompletedSteps[index];
+        }
+
+        // Check current step
+        if (State.CurrentStep != null && index == State.CurrentStepIndex)
+        {
+            return State.CurrentStep;
+        }
+
+        return null;
+    }
+
+    private AgentStatus GetStatus(int index)
+    {
+        if (State == null) return AgentStatus.Pending;
+
+        var stepResult = GetStepResult(index);
+        if (stepResult != null)
+        {
+            return stepResult.Status;
+        }
+
+        return AgentStatus.Pending;
+    }
+
+    private bool IsConnectorActive(int index)
+    {
+        if (State == null) return false;
+        return State.CurrentStepIndex > index || 
+               (State.CompletedSteps.Count > index && 
+                State.CompletedSteps[index].Status == AgentStatus.Completed);
+    }
+}

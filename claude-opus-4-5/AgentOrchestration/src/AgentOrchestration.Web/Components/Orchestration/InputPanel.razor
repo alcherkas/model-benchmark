@@ -1,0 +1,150 @@
+@using System.ComponentModel.DataAnnotations
+
+<div class="input-panel">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-input-cursor-text me-2"></i>
+                Product Input
+            </h5>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <label for="productDescription" class="form-label">Product Description</label>
+                    <InputTextArea id="productDescription" 
+                                   class="form-control" 
+                                   rows="6"
+                                   placeholder="Enter your product or service description here. Be as detailed as possible about features, benefits, and target market..."
+                                   @bind-Value="_model.ProductDescription"
+                                   disabled="@IsProcessing" />
+                    <ValidationMessage For="@(() => _model.ProductDescription)" class="text-danger" />
+                    <div class="form-text">
+                        Describe the product or service you want to create marketing content for.
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="tone" class="form-label">Tone (Optional)</label>
+                        <InputSelect id="tone" 
+                                     class="form-select" 
+                                     @bind-Value="_model.Tone"
+                                     disabled="@IsProcessing">
+                            <option value="">Auto-detect</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Casual">Casual</option>
+                            <option value="Friendly">Friendly</option>
+                            <option value="Authoritative">Authoritative</option>
+                            <option value="Playful">Playful</option>
+                            <option value="Inspirational">Inspirational</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="format" class="form-label">Content Format (Optional)</label>
+                        <InputSelect id="format" 
+                                     class="form-select" 
+                                     @bind-Value="_model.Format"
+                                     disabled="@IsProcessing">
+                            <option value="">All Formats</option>
+                            <option value="Social">Social Media</option>
+                            <option value="Website">Website Copy</option>
+                            <option value="Email">Email Marketing</option>
+                            <option value="Ad">Advertising</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <InputCheckbox id="showIntermediate" 
+                                       class="form-check-input" 
+                                       @bind-Value="_model.ShowIntermediateOutputs" />
+                        <label class="form-check-label" for="showIntermediate">
+                            Show intermediate agent outputs
+                        </label>
+                    </div>
+                    
+                    <div class="btn-group">
+                        @if (IsProcessing)
+                        {
+                            <button type="button" class="btn btn-danger" @onclick="HandleCancel">
+                                <i class="bi bi-stop-fill me-1"></i>Cancel
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-secondary" @onclick="HandleReset">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-play-fill me-1"></i>Run Pipeline
+                            </button>
+                        }
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<InputModel> OnSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public bool IsProcessing { get; set; }
+
+    private InputModel _model = new();
+
+    public class InputModel
+    {
+        [Required(ErrorMessage = "Product description is required")]
+        [MinLength(20, ErrorMessage = "Please provide at least 20 characters")]
+        [MaxLength(5000, ErrorMessage = "Description cannot exceed 5000 characters")]
+        public string ProductDescription { get; set; } = string.Empty;
+
+        public string? Tone { get; set; }
+        
+        public string? Format { get; set; }
+
+        public bool ShowIntermediateOutputs { get; set; } = true;
+
+        public string GetFormattedInput()
+        {
+            var input = ProductDescription;
+            
+            if (!string.IsNullOrEmpty(Tone))
+            {
+                input += $"\n\nPreferred Tone: {Tone}";
+            }
+            
+            if (!string.IsNullOrEmpty(Format))
+            {
+                input += $"\n\nContent Format Focus: {Format}";
+            }
+
+            return input;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        await OnSubmit.InvokeAsync(_model);
+    }
+
+    private async Task HandleCancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private void HandleReset()
+    {
+        _model = new InputModel();
+    }
+}

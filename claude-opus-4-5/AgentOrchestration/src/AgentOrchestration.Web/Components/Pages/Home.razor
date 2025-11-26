@@ -1,0 +1,150 @@
+﻿@page "/"
+@using AgentOrchestration.Core.Models
+@using AgentOrchestration.Core.Orchestration
+@using AgentOrchestration.Web.Components.Orchestration
+@inject IOrchestrationService OrchestrationService
+@inject SequentialPipeline Pipeline
+@rendermode InteractiveServer
+
+<PageTitle>Agent Orchestration - Content Generator</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6">
+                <i class="bi bi-robot me-2 text-primary"></i>
+                AI Agent Orchestration
+            </h1>
+            <p class="lead text-muted">
+                Generate professional marketing content through a sequential AI agent pipeline.
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <InputPanel OnSubmit="HandleSubmit" 
+                        OnCancel="HandleCancel" 
+                        IsProcessing="_isProcessing" />
+        </div>
+        <div class="col-lg-7 mb-4">
+            <PipelineView Pipeline="Pipeline" 
+                          State="_pipelineState" 
+                          ShowIntermediateOutputs="_showIntermediateOutputs" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <OutputViewer FinalOutput="@_finalOutput"
+                          Steps="@_completedSteps"
+                          Result="@_pipelineResult"
+                          IsLoading="_isProcessing"
+                          LoadingMessage="@_loadingMessage" />
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isProcessing;
+    private bool _showIntermediateOutputs = true;
+    private string? _finalOutput;
+    private string _loadingMessage = "Initializing pipeline...";
+    private PipelineState? _pipelineState;
+    private PipelineResult? _pipelineResult;
+    private List<StepResult> _completedSteps = new();
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+    {
+        OrchestrationService.StateChanged += OnStateChanged;
+        _pipelineState = PipelineState.Initial(Pipeline.StepCount);
+    }
+
+    private void OnStateChanged(object? sender, PipelineState newState)
+    {
+        InvokeAsync(() =>
+        {
+            _pipelineState = newState;
+            
+            if (newState.CurrentStep != null)
+            {
+                _loadingMessage = $"Running {newState.CurrentStep.AgentName} agent...";
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private async Task HandleSubmit(InputPanel.InputModel model)
+    {
+        _isProcessing = true;
+        _finalOutput = null;
+        _pipelineResult = null;
+        _completedSteps.Clear();
+        _showIntermediateOutputs = model.ShowIntermediateOutputs;
+        _cts = new CancellationTokenSource();
+
+        try
+        {
+            var input = model.GetFormattedInput();
+            
+            await foreach (var step in OrchestrationService.ExecuteStreamingAsync(input, _cts.Token))
+            {
+                if (step.Status == AgentStatus.Completed)
+                {
+                    _completedSteps.Add(step);
+                    _finalOutput = step.Output;
+                }
+                else if (step.Status == AgentStatus.Failed || step.Status == AgentStatus.Cancelled)
+                {
+                    _completedSteps.Add(step);
+                    break;
+                }
+                
+                StateHasChanged();
+            }
+
+            // Build final result
+            var totalDuration = _completedSteps.Aggregate(TimeSpan.Zero, (sum, s) => sum + s.Duration);
+            var hasFailed = _completedSteps.Any(s => s.Status == AgentStatus.Failed);
+            
+            _pipelineResult = hasFailed
+                ? PipelineResult.Failed(
+                    _completedSteps.FirstOrDefault(s => s.Status == AgentStatus.Failed)?.Error ?? "Unknown error",
+                    _completedSteps,
+                    totalDuration)
+                : PipelineResult.Successful(
+                    _finalOutput ?? string.Empty,
+                    _completedSteps,
+                    totalDuration);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled by user
+        }
+        catch (Exception ex)
+        {
+            _finalOutput = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+            _cts?.Dispose();
+            _cts = null;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        _cts?.Cancel();
+        await OrchestrationService.CancelAsync();
+    }
+
+    public void Dispose()
+    {
+        OrchestrationService.StateChanged -= OnStateChanged;
+        _cts?.Dispose();
+    }
+}

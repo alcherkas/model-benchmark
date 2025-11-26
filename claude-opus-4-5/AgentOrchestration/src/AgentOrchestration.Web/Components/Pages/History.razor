@@ -1,0 +1,64 @@
+@page "/history"
+@rendermode InteractiveServer
+
+<PageTitle>Pipeline History</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6">
+                <i class="bi bi-clock-history me-2 text-primary"></i>
+                Pipeline History
+            </h1>
+            <p class="lead text-muted">
+                View past orchestration runs and their results.
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                        <h5>No History Available</h5>
+                        <p>
+                            Pipeline execution history is not persisted in this demo version.
+                            <br />
+                            Run a pipeline to see results in real-time.
+                        </p>
+                        <a href="/" class="btn btn-primary mt-3">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Future Enhancements
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>The history feature could include:</p>
+                    <ul>
+                        <li>Persistent storage of pipeline executions</li>
+                        <li>Search and filter by date, status, or content</li>
+                        <li>Replay functionality to re-run past inputs</li>
+                        <li>Export history to CSV or JSON</li>
+                        <li>Comparison view between different runs</li>
+                        <li>Analytics and performance metrics over time</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

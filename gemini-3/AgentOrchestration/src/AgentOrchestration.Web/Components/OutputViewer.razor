@@ -1,0 +1,35 @@
+@using AgentOrchestration.Core.Models
+
+<div class="card mt-4">
+    <div class="card-header">
+        Final Output
+    </div>
+    <div class="card-body">
+        @if (Result != null)
+        {
+            @if (Result.Success)
+            {
+                <div class="alert alert-success">
+                    Pipeline completed in @Result.TotalDuration.TotalSeconds.ToString("F1")s
+                </div>
+                <div class="p-3 bg-light border rounded">
+                    <pre style="white-space: pre-wrap;">@Result.FinalOutput</pre>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger">
+                    Error: @Result.Error
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No output yet.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public PipelineResult? Result { get; set; }
+}

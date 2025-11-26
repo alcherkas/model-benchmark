@@ -48,7 +48,7 @@ A Blazor Server application demonstrating **Sequential Orchestration** using the
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| **UI Framework** | Blazor Server (Interactive SSR) | .NET 8.0 |
+| **UI Framework** | Blazor Server (Interactive SSR) | .NET 10.0 |
 | **Real-time** | SignalR (built into Blazor Server) | - |
 | **Agent Framework** | Microsoft.Agents.AI.* | 1.0.0-preview |
 | **AI Provider** | Azure OpenAI / OpenAI | Configurable |
@@ -64,8 +64,8 @@ A Blazor Server application demonstrating **Sequential Orchestration** using the
 <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.*" />
 
 <!-- Logging & Observability -->
-<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.*" />
-<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.9.*" />
+<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.*" />
+<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.11.*" />
 ```
 
 ## Sequential Orchestration Pattern

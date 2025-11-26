@@ -1,0 +1,46 @@
+@using AgentOrchestration.Core.Models
+@using AgentOrchestration.Core.Orchestration
+
+<div class="row">
+    @if (State?.CompletedSteps != null)
+    {
+        @foreach (var step in State.CompletedSteps)
+        {
+            <div class="col-md-4">
+                <AgentCard Step="step" />
+            </div>
+        }
+    }
+
+    @if (State?.CurrentStep != null)
+    {
+        <div class="col-md-4">
+            <AgentCard Step="State.CurrentStep" />
+        </div>
+    }
+    
+    @if (Pipeline != null && State != null)
+    {
+        var completedCount = State.CompletedSteps?.Count ?? 0;
+        var isRunning = State.CurrentStep != null;
+        var startIndex = completedCount + (isRunning ? 1 : 0);
+
+        for (int i = startIndex; i < Pipeline.Agents.Count; i++)
+        {
+            var agent = Pipeline.Agents[i];
+            <div class="col-md-4">
+                <div class="card mb-3 border-secondary opacity-50">
+                    <div class="card-body">
+                        <h5 class="card-title">@agent.Name</h5>
+                        <span class="badge bg-secondary">Pending</span>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public PipelineState? State { get; set; }
+    [Inject] public SequentialPipeline Pipeline { get; set; } = default!;
+}

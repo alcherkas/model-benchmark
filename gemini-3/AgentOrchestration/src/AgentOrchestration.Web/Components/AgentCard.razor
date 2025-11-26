@@ -1,0 +1,52 @@
+@using AgentOrchestration.Core.Models
+
+<div class="card mb-3 @GetStatusClass()">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title">@Step.AgentName</h5>
+            <span class="badge @GetBadgeClass()">@Step.Status</span>
+        </div>
+        <div class="mt-2">
+            <small class="text-muted">Duration: @Step.Duration.TotalSeconds.ToString("F1")s</small>
+        </div>
+        @if (!string.IsNullOrEmpty(Step.Output))
+        {
+            <div class="mt-2">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleDetails">
+                    @(ShowDetails ? "Hide Output" : "Show Output")
+                </button>
+            </div>
+            @if (ShowDetails)
+            {
+                <div class="mt-2 p-2 bg-light border rounded" style="max-height: 200px; overflow-y: auto;">
+                    <pre class="mb-0" style="white-space: pre-wrap;">@Step.Output</pre>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public StepResult Step { get; set; } = default!;
+    private bool ShowDetails { get; set; }
+
+    private void ToggleDetails() => ShowDetails = !ShowDetails;
+
+    private string GetStatusClass() => Step.Status switch
+    {
+        AgentStatus.Running => "border-primary shadow-sm",
+        AgentStatus.Completed => "border-success",
+        AgentStatus.Failed => "border-danger",
+        _ => "border-secondary"
+    };
+
+    private string GetBadgeClass() => Step.Status switch
+    {
+        AgentStatus.Pending => "bg-secondary",
+        AgentStatus.Running => "bg-primary",
+        AgentStatus.Completed => "bg-success",
+        AgentStatus.Failed => "bg-danger",
+        AgentStatus.Cancelled => "bg-warning",
+        _ => "bg-secondary"
+    };
+}

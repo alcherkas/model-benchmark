@@ -1,0 +1,168 @@
+@using AgentOrchestration.Core.Models
+
+<div class="output-viewer">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-file-text me-2"></i>
+                Output
+            </h5>
+            @if (!string.IsNullOrEmpty(FinalOutput))
+            {
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" @onclick="CopyToClipboard" title="Copy to clipboard">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="DownloadOutput" title="Download">
+                        <i class="bi bi-download"></i>
+                    </button>
+                </div>
+            }
+        </div>
+        <div class="card-body">
+            @if (IsLoading)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    <p class="mt-2 text-muted">@LoadingMessage</p>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(FinalOutput))
+            {
+                <ul class="nav nav-tabs" id="outputTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(ActiveTab == "final" ? "active" : "")" 
+                                @onclick="@(() => SetActiveTab("final"))"
+                                type="button" role="tab">
+                            <i class="bi bi-check2-circle me-1"></i>Final Output
+                        </button>
+                    </li>
+                    @if (Steps != null)
+                    {
+                        @foreach (var step in Steps.Where(s => s.Status == AgentStatus.Completed))
+                        {
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link @(ActiveTab == step.AgentName ? "active" : "")"
+                                        @onclick="@(() => SetActiveTab(step.AgentName))"
+                                        type="button" role="tab">
+                                    @step.AgentName
+                                </button>
+                            </li>
+                        }
+                    }
+                </ul>
+                <div class="tab-content mt-3">
+                    <div class="output-content">
+                        <pre class="output-pre">@GetTabContent()</pre>
+                    </div>
+                </div>
+                
+                @if (Result != null)
+                {
+                    <div class="output-stats mt-3 pt-3 border-top">
+                        <div class="row text-muted small">
+                            <div class="col-auto">
+                                <i class="bi bi-clock me-1"></i>
+                                Total time: @Result.TotalDuration.TotalSeconds.ToString("F1")s
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-hash me-1"></i>
+                                ~@Result.TotalTokensUsed tokens
+                            </div>
+                            <div class="col-auto">
+                                <i class="bi bi-list-ol me-1"></i>
+                                @Result.Steps.Count stages completed
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                    <p>No output yet. Enter a product description and run the pipeline to generate marketing content.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (_showCopyNotification)
+    {
+        <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+            <div class="toast show" role="alert">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle text-success me-2"></i>
+                    Copied to clipboard!
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter]
+    public string? FinalOutput { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<StepResult>? Steps { get; set; }
+
+    [Parameter]
+    public PipelineResult? Result { get; set; }
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public string LoadingMessage { get; set; } = "Processing...";
+
+    private string ActiveTab { get; set; } = "final";
+    private bool _showCopyNotification;
+
+    private void SetActiveTab(string tab)
+    {
+        ActiveTab = tab;
+    }
+
+    private string GetTabContent()
+    {
+        if (ActiveTab == "final")
+        {
+            return FinalOutput ?? string.Empty;
+        }
+
+        return Steps?.FirstOrDefault(s => s.AgentName == ActiveTab)?.Output ?? string.Empty;
+    }
+
+    private async Task CopyToClipboard()
+    {
+        var content = GetTabContent();
+        if (!string.IsNullOrEmpty(content))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", content);
+            _showCopyNotification = true;
+            StateHasChanged();
+            
+            await Task.Delay(2000);
+            _showCopyNotification = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadOutput()
+    {
+        var content = GetTabContent();
+        if (!string.IsNullOrEmpty(content))
+        {
+            var fileName = $"marketing-content-{DateTime.Now:yyyyMMdd-HHmmss}.txt";
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            var base64 = Convert.ToBase64String(bytes);
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, base64);
+        }
+    }
+}

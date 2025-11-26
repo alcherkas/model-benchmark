@@ -1,0 +1,67 @@
+﻿@page "/"
+@using AgentOrchestration.Core.Orchestration
+@using AgentOrchestration.Core.Models
+@using AgentOrchestration.Web.Components
+@inject IOrchestrationService OrchestrationService
+@inject ILogger<Home> Logger
+@rendermode InteractiveServer
+
+<PageTitle>Agent Orchestration</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">Agent Orchestration Dashboard</h1>
+
+    <div class="row">
+        <div class="col-md-4">
+            <InputPanel IsRunning="IsRunning" OnRun="RunPipeline" />
+        </div>
+        <div class="col-md-8">
+            <PipelineView State="CurrentState" />
+        </div>
+    </div>
+
+    <OutputViewer Result="FinalResult" />
+</div>
+
+@code {
+    private PipelineState? CurrentState;
+    private PipelineResult? FinalResult;
+    private bool IsRunning => CurrentState?.IsRunning ?? false;
+
+    protected override void OnInitialized()
+    {
+        CurrentState = OrchestrationService.GetCurrentState();
+    }
+
+    private async Task RunPipeline(string input)
+    {
+        FinalResult = null;
+        
+        try
+        {
+            await foreach (var step in OrchestrationService.ExecuteStreamingAsync(input))
+            {
+                CurrentState = OrchestrationService.GetCurrentState();
+                StateHasChanged();
+            }
+            
+            var state = OrchestrationService.GetCurrentState();
+            FinalResult = new PipelineResult(
+                true, 
+                state.CompletedSteps.LastOrDefault()?.Output ?? "", 
+                state.CompletedSteps, 
+                TimeSpan.Zero 
+            );
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Pipeline execution failed");
+            FinalResult = new PipelineResult(false, "", new List<StepResult>(), TimeSpan.Zero, ex.Message);
+        }
+        finally
+        {
+            CurrentState = OrchestrationService.GetCurrentState();
+            StateHasChanged();
+        }
+    }
+}

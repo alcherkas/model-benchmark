@@ -1,0 +1,130 @@
+@using AgentOrchestration.Core.Models
+@using AgentOrchestration.Core.Agents
+
+<div class="agent-card @GetStatusClass()">
+    <div class="agent-header">
+        <div class="agent-icon">
+            <i class="bi @Agent.IconClass"></i>
+        </div>
+        <div class="agent-info">
+            <h5 class="agent-name">@Agent.Name</h5>
+            <span class="agent-description">@Agent.Description</span>
+        </div>
+        <div class="agent-status-badge">
+            @switch (Status)
+            {
+                case AgentStatus.Pending:
+                    <span class="badge bg-secondary">Pending</span>
+                    break;
+                case AgentStatus.Running:
+                    <span class="badge bg-primary">
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        Running
+                    </span>
+                    break;
+                case AgentStatus.Completed:
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle me-1"></i>Completed
+                    </span>
+                    break;
+                case AgentStatus.Failed:
+                    <span class="badge bg-danger">
+                        <i class="bi bi-x-circle me-1"></i>Failed
+                    </span>
+                    break;
+                case AgentStatus.Cancelled:
+                    <span class="badge bg-warning">
+                        <i class="bi bi-stop-circle me-1"></i>Cancelled
+                    </span>
+                    break;
+            }
+        </div>
+    </div>
+
+    @if (Status != AgentStatus.Pending)
+    {
+        <div class="agent-details">
+            @if (Duration.HasValue && Duration.Value > TimeSpan.Zero)
+            {
+                <div class="detail-item">
+                    <i class="bi bi-clock"></i>
+                    <span>@Duration.Value.TotalSeconds.ToString("F1")s</span>
+                </div>
+            }
+            @if (TokensUsed > 0)
+            {
+                <div class="detail-item">
+                    <i class="bi bi-hash"></i>
+                    <span>~@TokensUsed tokens</span>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Output) && ShowOutput)
+    {
+        <div class="agent-output">
+            <button class="btn btn-sm btn-outline-secondary toggle-output" @onclick="ToggleExpanded">
+                <i class="bi @(IsExpanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                @(IsExpanded ? "Hide Output" : "Show Output")
+            </button>
+            @if (IsExpanded)
+            {
+                <div class="output-content">
+                    <pre>@Output</pre>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="agent-error alert alert-danger mb-0 mt-2">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            @Error
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IAgentDefinition Agent { get; set; } = default!;
+
+    [Parameter]
+    public AgentStatus Status { get; set; } = AgentStatus.Pending;
+
+    [Parameter]
+    public string? Output { get; set; }
+
+    [Parameter]
+    public TimeSpan? Duration { get; set; }
+
+    [Parameter]
+    public int TokensUsed { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public bool ShowOutput { get; set; } = true;
+
+    private bool IsExpanded { get; set; } = false;
+
+    private void ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+    }
+
+    private string GetStatusClass()
+    {
+        return Status switch
+        {
+            AgentStatus.Pending => "status-pending",
+            AgentStatus.Running => "status-running",
+            AgentStatus.Completed => "status-completed",
+            AgentStatus.Failed => "status-failed",
+            AgentStatus.Cancelled => "status-cancelled",
+            _ => ""
+        };
+    }
+}
