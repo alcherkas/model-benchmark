@@ -1,6 +1,7 @@
 using AgentOrchestration.Core.Models;
 using AgentOrchestration.Core.Orchestration;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AgentOrchestration.Web.Services;
 
@@ -41,20 +42,37 @@ public class OrchestrationHub : Hub
 public class OrchestrationHubService : IDisposable
 {
     private readonly IHubContext<OrchestrationHub> _hubContext;
-    private readonly IOrchestrationService _orchestrationService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OrchestrationHubService> _logger;
+    private readonly List<IDisposable> _subscriptions = new();
 
     public OrchestrationHubService(
         IHubContext<OrchestrationHub> hubContext,
-        IOrchestrationService orchestrationService,
+        IServiceScopeFactory scopeFactory,
         ILogger<OrchestrationHubService> logger)
     {
         _hubContext = hubContext;
-        _orchestrationService = orchestrationService;
+        _scopeFactory = scopeFactory;
         _logger = logger;
+    }
 
-        // Subscribe to state changes
-        _orchestrationService.StateChanged += OnStateChanged;
+    /// <summary>
+    /// Subscribes to state changes from an orchestration service instance.
+    /// </summary>
+    public void Subscribe(IOrchestrationService orchestrationService)
+    {
+        orchestrationService.StateChanged += OnStateChanged;
+    }
+
+    /// <summary>
+    /// Gets the orchestration service from a new scope.
+    /// </summary>
+    public IOrchestrationService CreateOrchestrationService()
+    {
+        var scope = _scopeFactory.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IOrchestrationService>();
+        Subscribe(service);
+        return service;
     }
 
     private async void OnStateChanged(object? sender, PipelineState state)
@@ -101,6 +119,10 @@ public class OrchestrationHubService : IDisposable
 
     public void Dispose()
     {
-        _orchestrationService.StateChanged -= OnStateChanged;
+        foreach (var subscription in _subscriptions)
+        {
+            subscription.Dispose();
+        }
+        _subscriptions.Clear();
     }
 }

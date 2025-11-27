@@ -19,9 +19,6 @@ builder.Services.AddSingleton<OrchestrationHubService>();
 
 var app = builder.Build();
 
-// Initialize the hub service (to start listening to events)
-_ = app.Services.GetRequiredService<OrchestrationHubService>();
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
